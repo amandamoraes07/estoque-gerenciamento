@@ -1,87 +1,109 @@
-let estoque = [];
+const db = firebase.firestore();
 
-function mostrarAdicionar(){
+function mostrarAdicionar() {
     const conteudo = document.getElementById('conteudo');
     conteudo.innerHTML = `
         <h2>Adicionar Item</h2>
         <form onsubmit="adicionarItem(event)">
             <label>Nome do Item:</label>
             <input type="text" id="nome-item" required>
-            <label>Quantidade</label>
+            <label>Quantidade:</label>
             <input type="number" id="quantidade-item" required>
             <button type="submit">Adicionar</button>
         </form>
     `;
 }
 
+let unsubscribeEstoque = null;
+
 function mostrarEstoque() {
     const conteudo = document.getElementById('conteudo');
 
-    if (estoque.length === 0){
-        conteudo.innerHTML = "<h2>Estoque Vazio</h2>";
-        return;
+    if (unsubscribeEstoque) {
+        unsubscribeEstoque();
     }
 
-    let tabela = `
-        <h2>Estoque Atual</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>Quantidade</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    unsubscribeEstoque = db.collection("estoque").onSnapshot((querySnapshot) => {
+        if (querySnapshot.empty) {
+            return;
+        }
 
-    estoque.forEach((item, index) => {
-        tabela += `
+        let tabela = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Quantidade</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        querySnapshot.forEach((doc) => {
+            const item = doc.data();
+            tabela += `
                 <tr>
                     <td>${item.nome}</td>
                     <td>${item.quantidade}</td>
                     <td>
-                        <button onclick="editarItem(${index})">Editar</button>
-                        <button onclick="excluirItem(${index})">Excluir</button>
+                        <button onclick="editarItem('${doc.id}', '${item.nome}', ${item.quantidade})">Editar</button>
+                        <button onclick="excluirItem('${doc.id}')">Excluir</button>
                     </td>
                 </tr>
+            `;
+        });
+
+        tabela += `
+                </tbody>
+            </table>
         `;
+
+        conteudo.innerHTML = tabela;
+    }, (error) => {
+        console.error("Erro ao escutar o estoque em tempo real:", error);
+        conteudo.innerHTML = "<p>Erro ao carregar estoque.</p>";
     });
-
-    tabela += `
-            </tbody>
-        </table>
-    `;
-
-    conteudo.innerHTML = tabela;
 }
 
-function adicionarItem(event){
+
+function adicionarItem(event) {
     event.preventDefault();
 
-    const nome = document.getElementById('nome-item').value;
-    const quantidade = parseInt(document.getElementById('quantidade-item').value);
+    const nome = document.getElementById('nome-item').value.trim();
+    const quantidade = parseInt(document.getElementById('quantidade-item').value.trim());
 
-    estoque.push({nome, quantidade});
-    alert("Item adicionado com sucesso!");
+    if (!nome || isNaN(quantidade)) {
+        alert('Preencha todos os campos.');
+        return;
+    }
 
-    document.getElementById('nome-item').value = '';
-    document.getElementById('quantidade-item').value = '';
+    const novoItem = {
+        nome,
+        quantidade,
+        dataCadastro: new Date()
+    };
 
-    mostrarEstoque();
+    db.collection("estoque").add(novoItem)
+        .then(() => {
+            exibirMensagem("Item adicionado com sucesso!");
+        })
+        .catch(error => {
+            console.error("Erro ao adicionar item: ", error);
+            exibirMensagem("Erro ao adicionar item.", "erro");
+        })
 }
 
-function editarItem(index) {
-    const item = estoque[index];
+function editarItem(id, nome, quantidade) {
     const conteudo = document.getElementById('conteudo');
 
     conteudo.innerHTML = `
         <h2>Editar Item</h2>
-        <form onsubmit="salvarEdicao(event, ${index})">
+        <form onsubmit="salvarEdicao(event, '${id}')">
             <label>Nome do Item:</label>
-            <input type="text" id="nome-item-edit" value="${item.nome}" required>
+            <input type="text" id="nome-item-edit" value="${nome}" required>
             <label>Quantidade:</label>
-            <input type="number" id="quantidade-item-edit" value="${item.quantidade}" required>
+            <input type="number" id="quantidade-item-edit" value="${quantidade}" required>
             <div class="editar-acoes">
                 <button type="submit">Salvar</button>
                 <button type="button" onclick="mostrarEstoque()">Cancelar</button>
@@ -90,33 +112,75 @@ function editarItem(index) {
     `;
 }
 
-function salvarEdicao(event, index) {
+function salvarEdicao(event, id) {
     event.preventDefault();
 
     const nome = document.getElementById('nome-item-edit').value;
     const quantidade = parseInt(document.getElementById('quantidade-item-edit').value);
 
-    estoque[index] = { nome, quantidade };
-    alert("Item atualizado com sucesso!");
-
-    mostrarEstoque();
+    db.collection("estoque").doc(id).update({
+        nome: nome,
+        quantidade: quantidade
+    })
+    .then(() => {
+        exibirMensagem("Item atualizado com sucesso!");
+    })
+    .catch((error) => {
+        console.error("Erro ao atualizar item: ", error);
+        exibirMensagem("Erro ao atualizar item.", "erro");
+    });
 }
 
-function excluirItem(index) {
+function excluirItem(id) {
     const confirma = confirm("Tem certeza que deseja excluir este item?");
 
     if (confirma) {
-        estoque.splice(index, 1);
-        alert("Item excluído com sucesso!")
-
-        mostrarEstoque();
+        db.collection("estoque").doc(id).delete()
+            .then(() => {
+                exibirMensagem("Item excluído com sucesso!");
+            })
+            .catch((error) => {
+                console.error("Erro ao excluir item: ", error);
+                exibirMensagem("Erro ao excluir item.", "erro");
+            });
     }
 }
 
-function logout() {
-    const confirmaLogout = confirm("Tem certeza que deseja sair?");
 
-    if (confirmaLogout) {
-        window.location.href='index.html';
+function logout() {
+    if (confirm("Tem certeza que deseja sair?")) {
+        window.location.href = 'index.html';
     }
+}
+
+window.mostrarEstoque = mostrarEstoque;
+window.mostrarAdicionar = mostrarAdicionar;
+window.logout = logout;
+
+auth.onAuthStateChanged(user => {
+    if (!user) {
+        window.location.href = 'index.html';
+    } else {
+        mostrarEstoque();
+    }
+});
+
+function exibirMensagem(texto, tipo = 'sucesso') {
+    console.log("Entrei aqui!");
+    const divMensagem = document.getElementById('mensagem');
+    divMensagem.textContent = texto;
+
+    divMensagem.classList.remove('mensagem-oculta');
+    divMensagem.classList.add('mensagem-visivel');
+
+    if (tipo === 'erro') {
+        divMensagem.classList.add('mensagem-erro');
+    } else {
+        divMensagem.classList.remove('mensagem-erro');
+    }
+
+    setTimeout(() => {
+        divMensagem.classList.remove('mensagem-visivel');
+        divMensagem.classList.add('mensagem-oculta');
+    }, 3000);
 }
