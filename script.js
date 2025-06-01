@@ -1,16 +1,27 @@
-document.getElementById('login-form').addEventListener('submit', function(e) {
+document.getElementById('login-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value.trim();
     const errorMsg = document.getElementById('login-error');
+    const botao = this.querySelector('button');
 
-    const userValido = 'admin';
-    const senhaValida = '1234';
+    errorMsg.textContent = ''; // limpa erro anterior
+    botao.disabled = true;
 
-    if (username === userValido && password === senhaValida) {
-        window.location.href = 'dashboard.html';
-    } else {
-        errorMsg.textContent = 'Usuario ou senha invalidos';
+    if (!email || !senha) {
+        errorMsg.textContent = "Preencha todos os campos.";
+        botao.disabled = false;
+        return;
     }
+
+    firebase.auth().signInWithEmailAndPassword(email, senha)
+        .then(() => {
+            window.location.href = 'dashboard.html';
+        })
+        .catch(error => {
+            console.error("Erro de login:", error);
+            errorMsg.textContent = "Email ou senha inválidos.";
+            botao.disabled = false;
+        });
 });
