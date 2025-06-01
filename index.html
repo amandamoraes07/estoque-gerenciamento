@@ -10,12 +10,32 @@
     <div class="login-container">
         <h2>Gestão de Estoque</h2>
         <form id="login-form">
-            <input type="text" id="username" placeholder="Usuario" required>
-            <input type="password" id="password" placeholder="Senha" required>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="senha" placeholder="Senha" required>
             <button type="submit">Entrar</button>
             <p id="login-error" class="error-message"></p>
         </form>
     </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjpVki285WD6FLkFKu4rXsQgL1gAaDLyM",
+            authDomain: "estoque-web-1f946.firebaseapp.com",
+            projectId: "estoque-web-1f946",
+            storageBucket: "estoque-web-1f946.appspot.com",
+            messagingSenderId: "357119029228",
+            appId: "1:357119029228:web:6b37bb8789be419d309ac9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+    </script>
 
     <script src="script.js"></script>
 </body>
