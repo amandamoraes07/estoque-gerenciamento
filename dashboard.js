@@ -23,8 +23,18 @@ function mostrarEstoque() {
         unsubscribeEstoque();
     }
 
-    unsubscribeEstoque = db.collection("estoque").onSnapshot((querySnapshot) => {
-        if (querySnapshot.empty) {
+    conteudo.innerHTML = `
+        <input type="text" id="busca" placeholder="Buscar item por nome" style="margin-bottom: 10px; padding: 5px; width: 100%;">
+        <div id="tabelaEstoque"></div>
+    `;
+
+    const inputBusca = document.getElementById('busca');
+    const divTabela = document.getElementById('tabelaEstoque');
+    let todosOsItens = [];
+
+    function renderizarTabela(itens) {
+        if (itens.length === 0) {
+            divTabela.innerHTML = "<p>Nenhum item encontrado.</p>";
             return;
         }
 
@@ -40,7 +50,7 @@ function mostrarEstoque() {
                 <tbody>
         `;
 
-        querySnapshot.forEach((doc) => {
+        itens.forEach(doc => {
             const item = doc.data();
             tabela += `
                 <tr>
@@ -59,13 +69,27 @@ function mostrarEstoque() {
             </table>
         `;
 
-        conteudo.innerHTML = tabela;
+        divTabela.innerHTML = tabela;
+    }
+
+    function aplicarFiltro() {
+        const termo = inputBusca.value.toLowerCase();
+        const filtrados = todosOsItens.filter(doc =>
+            doc.data().nome.toLowerCase().includes(termo)
+        );
+        renderizarTabela(filtrados);
+    }
+
+    inputBusca.addEventListener("input", aplicarFiltro);
+
+    unsubscribeEstoque = db.collection("estoque").onSnapshot((querySnapshot) => {
+        todosOsItens = querySnapshot.docs;
+        aplicarFiltro();
     }, (error) => {
         console.error("Erro ao escutar o estoque em tempo real:", error);
-        conteudo.innerHTML = "<p>Erro ao carregar estoque.</p>";
+        divTabela.innerHTML = "<p>Erro ao carregar estoque.</p>";
     });
 }
-
 
 function adicionarItem(event) {
     event.preventDefault();
@@ -87,6 +111,7 @@ function adicionarItem(event) {
     db.collection("estoque").add(novoItem)
         .then(() => {
             exibirMensagem("Item adicionado com sucesso!");
+            mostrarEstoque();
         })
         .catch(error => {
             console.error("Erro ao adicionar item: ", error);
@@ -124,6 +149,7 @@ function salvarEdicao(event, id) {
     })
     .then(() => {
         exibirMensagem("Item atualizado com sucesso!");
+        mostrarEstoque();
     })
     .catch((error) => {
         console.error("Erro ao atualizar item: ", error);
