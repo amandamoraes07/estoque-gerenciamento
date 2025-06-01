@@ -123,3 +123,35 @@ tbody button:nth-child(1):hover {
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s;
 }
+
+#mensagem {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    z-index: 9999;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.3);
+    font-weight: bold;
+    transition: opacity 0.5s ease;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.mensagem-visivel {
+    opacity: 1;
+    visibility: visible;
+}
+
+.mensagem-oculta {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.mensagem-erro {
+    background-color: #f44336;
+}
