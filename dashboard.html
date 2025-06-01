@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Estoque</title>
+    <title>Dashboard - Gestão de Estoque</title>
     <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
+    <div id="mensagem" class="mensagem-oculta"></div>
     <header>
         <h1>Gestão de Estoque</h1>
         <nav>
@@ -15,8 +16,27 @@
             <button onclick="logout()">Sair</button>
         </nav>
     </header>
-    <main id="conteudo">
-    </main>
+
+    <main id="conteudo"></main>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjpVki285WD6FLkFKu4rXsQgL1gAaDLyM",
+            authDomain: "estoque-web-1f946.firebaseapp.com",
+            projectId: "estoque-web-1f946",
+            storageBucket: "estoque-web-1f946.appspot.com",
+            messagingSenderId: "357119029228",
+            appId: "1:357119029228:web:6b37bb8789be419d309ac9"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+    </script>
 
     <script src="dashboard.js"></script>
 </body>
