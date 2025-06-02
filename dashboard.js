@@ -3,12 +3,13 @@ const db = firebase.firestore();
 function mostrarAdicionar() {
     const conteudo = document.getElementById('conteudo');
     conteudo.innerHTML = `
-        <h2>Adicionar Item</h2>
         <form onsubmit="adicionarItem(event)">
             <label>Nome do Item:</label>
             <input type="text" id="nome-item" required>
+            
             <label>Quantidade:</label>
-            <input type="number" id="quantidade-item" required>
+            <input type="number" id="quantidade-item" required min="0">
+            
             <button type="submit">Adicionar</button>
         </form>
     `;
@@ -23,68 +24,85 @@ function mostrarEstoque() {
         unsubscribeEstoque();
     }
 
-    conteudo.innerHTML = `
-        <input type="text" id="busca" placeholder="Buscar item por nome" style="margin-bottom: 10px; padding: 5px; width: 100%;">
-        <div id="tabelaEstoque"></div>
-    `;
-
-    const inputBusca = document.getElementById('busca');
+    conteudo.innerHTML = `<div id="tabelaEstoque"></div>`;
     const divTabela = document.getElementById('tabelaEstoque');
     let todosOsItens = [];
 
-    function renderizarTabela(itens) {
-        if (itens.length === 0) {
-            divTabela.innerHTML = "<p>Nenhum item encontrado.</p>";
+    function renderizarTabela(itensFiltrados) {
+        if (todosOsItens.length === 0) {
             return;
         }
 
-        let tabela = `
-            <table>
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Quantidade</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
+        const valorBuscaAtual = document.getElementById('busca')?.value || '';
+
+        const inputBuscaHTML = `
+            <input type="text" id="busca" placeholder="Buscar item por nome" style="margin-bottom: 10px; padding: 5px; width: 100%;">
         `;
 
-        itens.forEach(doc => {
-            const item = doc.data();
+        let tabela = "";
+
+        if (itensFiltrados.length === 0) {
+            tabela = `<p>Nenhum item encontrado.</p>`;
+        } else {
             tabela += `
-                <tr>
-                    <td>${item.nome}</td>
-                    <td>${item.quantidade}</td>
-                    <td>
-                        <button onclick="editarItem('${doc.id}', '${item.nome}', ${item.quantidade})">Editar</button>
-                        <button onclick="excluirItem('${doc.id}')">Excluir</button>
-                    </td>
-                </tr>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Quantidade</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
             `;
-        });
 
-        tabela += `
-                </tbody>
-            </table>
-        `;
+            itensFiltrados.forEach(doc => {
+                const item = doc.data();
+                tabela += `
+                    <tr>
+                        <td>${item.nome}</td>
+                        <td>${item.quantidade}</td>
+                        <td>
+                            <button onclick="editarItem('${doc.id}', '${item.nome}', ${item.quantidade})">Editar</button>
+                            <button onclick="excluirItem('${doc.id}')">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+            });
 
-        divTabela.innerHTML = tabela;
+            tabela += `
+                    </tbody>
+                </table>
+            `;
+        }
+
+        divTabela.innerHTML = inputBuscaHTML + tabela;
+
+        const inputBusca = document.getElementById('busca');
+        if (inputBusca) {
+            inputBusca.value = valorBuscaAtual;
+            inputBusca.focus();
+            inputBusca.addEventListener("input", aplicarFiltro);
+        }
     }
 
     function aplicarFiltro() {
-        const termo = inputBusca.value.toLowerCase();
+        const inputBusca = document.getElementById('busca');
+        const termo = inputBusca ? inputBusca.value.toLowerCase() : '';
         const filtrados = todosOsItens.filter(doc =>
             doc.data().nome.toLowerCase().includes(termo)
         );
         renderizarTabela(filtrados);
     }
 
-    inputBusca.addEventListener("input", aplicarFiltro);
-
-    unsubscribeEstoque = db.collection("estoque").onSnapshot((querySnapshot) => {
+    unsubscribeEstoque = db.collection("estoque")
+    .where("uid", "==", firebase.auth().currentUser.uid)
+    .onSnapshot((querySnapshot) => {
         todosOsItens = querySnapshot.docs;
-        aplicarFiltro();
+
+        if (todosOsItens.length > 0) {
+            renderizarTabela(todosOsItens);
+        }
     }, (error) => {
         console.error("Erro ao escutar o estoque em tempo real:", error);
         divTabela.innerHTML = "<p>Erro ao carregar estoque.</p>";
@@ -102,9 +120,12 @@ function adicionarItem(event) {
         return;
     }
 
+    const user = firebase.auth().currentUser;
+
     const novoItem = {
         nome,
         quantidade,
+        uid: user.uid,
         dataCadastro: new Date()
     };
 
@@ -158,25 +179,25 @@ function salvarEdicao(event, id) {
 }
 
 function excluirItem(id) {
-    const confirma = confirm("Tem certeza que deseja excluir este item?");
-
-    if (confirma) {
-        db.collection("estoque").doc(id).delete()
-            .then(() => {
-                exibirMensagem("Item excluído com sucesso!");
-            })
-            .catch((error) => {
-                console.error("Erro ao excluir item: ", error);
-                exibirMensagem("Erro ao excluir item.", "erro");
-            });
-    }
+  mostrarModalConfirmacao("Tem certeza que deseja excluir este item?", () => {
+    db.collection("estoque").doc(id).delete()
+      .then(() => {
+        exibirMensagem("Item excluído com sucesso!");
+        mostrarEstoque();
+      })
+      .catch((error) => {
+        console.error("Erro ao excluir item: ", error);
+        exibirMensagem("Erro ao excluir item.", "erro");
+      });
+  });
 }
 
-
 function logout() {
-    if (confirm("Tem certeza que deseja sair?")) {
-        window.location.href = 'index.html';
-    }
+  mostrarModalConfirmacao("Tem certeza que deseja sair?", () => {
+    auth.signOut().then(() => {
+      window.location.href = 'index.html';
+    });
+  });
 }
 
 window.mostrarEstoque = mostrarEstoque;
@@ -209,4 +230,33 @@ function exibirMensagem(texto, tipo = 'sucesso') {
         divMensagem.classList.remove('mensagem-visivel');
         divMensagem.classList.add('mensagem-oculta');
     }, 3000);
+}
+
+function mostrarModalConfirmacao(mensagem, callbackSim) {
+  const modal = document.getElementById('modalConfirmacao');
+  const mensagemModal = document.getElementById('mensagemModal');
+  const btnConfirmar = document.getElementById('btnConfirmar');
+  const btnCancelar = document.getElementById('btnCancelar');
+
+  mensagemModal.textContent = mensagem;
+  modal.classList.remove('oculto');
+
+  function limparEventos() {
+    btnConfirmar.removeEventListener('click', confirmar);
+    btnCancelar.removeEventListener('click', cancelar);
+  }
+
+  function confirmar() {
+    limparEventos();
+    modal.classList.add('oculto');
+    callbackSim(); // ação que você quer executar
+  }
+
+  function cancelar() {
+    limparEventos();
+    modal.classList.add('oculto');
+  }
+
+  btnConfirmar.addEventListener('click', confirmar);
+  btnCancelar.addEventListener('click', cancelar);
 }
